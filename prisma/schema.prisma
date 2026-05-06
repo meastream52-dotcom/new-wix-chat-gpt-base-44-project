@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  title     String
+  source    String
+  text      String
+  s3Key     String?
+  caseTag   String   @default("general")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  claims    Claim[]
+}
+
+model Claim {
+  id         String   @id @default(uuid())
+  text       String
+  confidence Float
+  status     ClaimStatus @default(PENDING)
+  timeRef    String?
+  entities   String[]
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model Theory {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  claimIds    String[]
+  score       Float?
+  scoreBreakdown Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Contradiction {
+  id          String   @id @default(uuid())
+  claimAId    String
+  claimBId    String
+  reason      String
+  severity    Float
+  detectedAt  DateTime @default(now())
+}
+
+enum ClaimStatus {
+  PENDING
+  ACCEPTED
+  WEAK
+  REJECTED
+}
