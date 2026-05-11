@@ -65,30 +65,33 @@ export function GraphCanvas({ data, onNodeClick }: GraphCanvasProps) {
       .attr("stroke-dasharray", (d) => (d.type === "CONTRADICTS" ? "4 2" : "none"))
       .attr("stroke-opacity", 0.7);
 
+    type SimNode = GraphNode & d3.SimulationNodeDatum;
+
+    const dragBehavior = d3.drag<SVGGElement, SimNode>()
+      .on("start", (event, d) => {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      })
+      .on("drag", (event, d) => {
+        d.fx = event.x;
+        d.fy = event.y;
+      })
+      .on("end", (event, d) => {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      });
+
     const node = g
       .append("g")
       .selectAll("g")
-      .data(nodes)
+      .data(nodes as SimNode[])
       .join("g")
       .attr("cursor", "pointer")
       .on("click", (_, d) => onNodeClick(d as GraphNode))
-      .call(
-        d3.drag<SVGGElement, GraphNode & d3.SimulationNodeDatum>()
-          .on("start", (event, d) => {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-          })
-          .on("drag", (event, d) => {
-            d.fx = event.x;
-            d.fy = event.y;
-          })
-          .on("end", (event, d) => {
-            if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
-          }) as d3.DragBehavior<SVGGElement, unknown, unknown>
-      );
+      // @ts-expect-error D3 drag types don't reconcile BaseType with SVGGElement in .call()
+      .call(dragBehavior);
 
     node
       .append("circle")

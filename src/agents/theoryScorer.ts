@@ -87,7 +87,7 @@ export async function scoreTheory(
   // Persist score back to theory
   await prisma.theory.update({
     where: { id: theoryId },
-    data: { score: parsed.score, scoreBreakdown: breakdown },
+    data: { score: parsed.score, scoreBreakdown: { ...breakdown } },
   });
 
   return {
