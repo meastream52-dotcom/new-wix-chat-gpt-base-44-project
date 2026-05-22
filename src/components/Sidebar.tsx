@@ -12,6 +12,14 @@ const NAV = [
   { href: "/theory", label: "Theory", icon: "◉" },
 ];
 
+const PLAYBOOK_NAV = [
+  { href: "/playbook", label: "Overview", icon: "◇" },
+  { href: "/playbook/operating-plan", label: "12-Mo Plan", icon: "◫" },
+  { href: "/playbook/talent", label: "Talent", icon: "◑" },
+  { href: "/playbook/projects", label: "Projects", icon: "◰" },
+  { href: "/playbook/pitch", label: "Pitch Deck", icon: "◲" },
+];
+
 export function Sidebar() {
   const path = usePathname();
 
@@ -22,22 +30,49 @@ export function Sidebar() {
         <div className="text-[10px] text-[#58a6ff]/60">structured reasoning</div>
       </div>
 
-      <div className="flex-1 py-4 px-3 space-y-1">
-        {NAV.map(({ href, label, icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={clsx(
-              "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-              path === href
-                ? "bg-[#161b22] text-[#58a6ff] border border-[#21262d]"
-                : "text-[#8b949e] hover:text-gray-200 hover:bg-[#161b22]"
-            )}
-          >
-            <span className="text-base leading-none">{icon}</span>
-            {label}
-          </Link>
-        ))}
+      <div className="flex-1 py-4 px-3 overflow-y-auto">
+        <div className="space-y-1 mb-4">
+          {NAV.map(({ href, label, icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={clsx(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                path === href
+                  ? "bg-[#161b22] text-[#58a6ff] border border-[#21262d]"
+                  : "text-[#8b949e] hover:text-gray-200 hover:bg-[#161b22]"
+              )}
+            >
+              <span className="text-base leading-none">{icon}</span>
+              {label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="border-t border-[#21262d] pt-4">
+          <div className="px-3 mb-2">
+            <span className="text-[10px] font-mono text-[#f0883e]/60 uppercase tracking-widest">
+              Studio Playbook
+            </span>
+          </div>
+          <div className="space-y-1">
+            {PLAYBOOK_NAV.map(({ href, label, icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className={clsx(
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                  path === href || (href !== "/playbook" && path.startsWith(href))
+                    ? "bg-[#161b22] text-[#f0883e] border border-[#21262d]"
+                    : "text-[#8b949e] hover:text-gray-200 hover:bg-[#161b22]"
+                )}
+              >
+                <span className="text-base leading-none">{icon}</span>
+                {label}
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="px-5 py-4 border-t border-[#21262d]">
