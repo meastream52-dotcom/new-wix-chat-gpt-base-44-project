@@ -10,6 +10,7 @@ const NAV = [
   { href: "/claims", label: "Claims", icon: "◈" },
   { href: "/graph", label: "Graph", icon: "◎" },
   { href: "/theory", label: "Theory", icon: "◉" },
+  { href: "/blog-writer", label: "Blog Writer", icon: "✍" },
 ];
 
 export function Sidebar() {
