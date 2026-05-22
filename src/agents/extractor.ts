@@ -1,4 +1,5 @@
 import { chat } from "@/lib/openai";
+import { MOCK_MODE, mockExtract } from "@/lib/mock";
 import { RawClaim } from "@/lib/types";
 import { z } from "zod";
 
@@ -37,6 +38,7 @@ const ResponseSchema = z.object({
 });
 
 export async function extractClaims(documentText: string): Promise<RawClaim[]> {
+  if (MOCK_MODE) return mockExtract(documentText);
   const truncated = documentText.slice(0, 12000);
   const raw = await chat(SYSTEM_PROMPT, `Extract all atomic claims from this document:\n\n${truncated}`);
 

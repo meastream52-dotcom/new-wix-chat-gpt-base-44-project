@@ -1,4 +1,5 @@
 import { chat } from "@/lib/openai";
+import { MOCK_MODE, mockScoreTheory } from "@/lib/mock";
 import { prisma } from "@/lib/db";
 import { TheoryNode, TheoryResult, TheoryScoreBreakdown } from "@/lib/types";
 import { z } from "zod";
@@ -41,6 +42,14 @@ export async function scoreTheory(
   theoryId: string,
   nodes: TheoryNode[]
 ): Promise<TheoryResult> {
+  if (MOCK_MODE) {
+    const result = mockScoreTheory();
+    await prisma.theory.update({
+      where: { id: theoryId },
+      data: { score: result.score, scoreBreakdown: { ...result.breakdown } },
+    });
+    return result;
+  }
   const claimIds = nodes.map((n) => n.claimId);
 
   // Fetch actual claim data

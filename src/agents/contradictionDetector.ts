@@ -1,5 +1,6 @@
 import { chat } from "@/lib/openai";
 import { runQuery } from "@/lib/neo4j";
+import { MOCK_MODE, mockContradictions } from "@/lib/mock";
 import { prisma } from "@/lib/db";
 import { Contradiction } from "@/lib/types";
 import { z } from "zod";
@@ -44,6 +45,18 @@ export async function detectContradictions(documentId: string): Promise<Contradi
   });
 
   if (claims.length < 2) return [];
+
+  if (MOCK_MODE) {
+    const mocked = mockContradictions(claims.map((c) => c.id));
+    return Promise.all(
+      mocked.map(async (m) => {
+        const record = await prisma.contradiction.create({ data: m });
+        const a = claims.find((c) => c.id === m.claimAId)!;
+        const b = claims.find((c) => c.id === m.claimBId)!;
+        return { id: record.id, claimAId: a.id, claimBId: b.id, claimAText: a.text, claimBText: b.text, reason: m.reason, severity: m.severity };
+      })
+    );
+  }
 
   const claimList = claims.map((c, i) => ({ index: i, id: c.id, text: c.text }));
   const raw = await chat(

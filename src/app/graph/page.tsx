@@ -19,6 +19,8 @@ function GraphPageInner() {
   const [contradictions, setContradictions] = useState<Contradiction[]>([]);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [loading, setLoading] = useState(true);
+  const [crossCaseRunning, setCrossCaseRunning] = useState(false);
+  const [crossCaseCount, setCrossCaseCount] = useState<number | null>(null);
 
   const fetchGraph = useCallback(async () => {
     setLoading(true);
@@ -30,6 +32,23 @@ function GraphPageInner() {
   }, [documentId]);
 
   useEffect(() => { fetchGraph(); }, [fetchGraph]);
+
+  const runCrossCase = async () => {
+    setCrossCaseRunning(true);
+    const docsRes = await fetch("/api/upload");
+    const docsData = await docsRes.json();
+    const ids = (docsData.documents ?? []).map((d: { id: string }) => d.id);
+    if (ids.length < 2) { setCrossCaseRunning(false); return; }
+    const res = await fetch("/api/cross-case", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentIds: ids }),
+    });
+    const data = await res.json();
+    setCrossCaseCount(data.count ?? 0);
+    setCrossCaseRunning(false);
+    fetchGraph();
+  };
 
   const stats = {
     nodes: graphData.nodes.length,
@@ -47,6 +66,16 @@ function GraphPageInner() {
             <span>{stats.edges} edges</span>
             {stats.contradictions > 0 && (
               <span className="text-red-400">{stats.contradictions} contradictions</span>
+            )}
+            <button
+              onClick={runCrossCase}
+              disabled={crossCaseRunning}
+              className="px-3 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-40"
+            >
+              {crossCaseRunning ? "Detecting…" : "Cross-Case Scan"}
+            </button>
+            {crossCaseCount !== null && (
+              <span className="text-red-400">{crossCaseCount} cross-doc conflicts found</span>
             )}
           </div>
         </div>

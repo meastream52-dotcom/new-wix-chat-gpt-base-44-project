@@ -1,4 +1,5 @@
 import { chat } from "@/lib/openai";
+import { MOCK_MODE, mockJudge } from "@/lib/mock";
 import { RawClaim, ClaimStatus } from "@/lib/types";
 import { z } from "zod";
 
@@ -43,6 +44,7 @@ export interface JudgmentResult {
 }
 
 export async function judgeClaims(claims: RawClaim[]): Promise<JudgmentResult[]> {
+  if (MOCK_MODE) return mockJudge(claims);
   const claimsJson = JSON.stringify(
     claims.map((c, i) => ({ index: i, text: c.text, confidence: c.confidence }))
   );

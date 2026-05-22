@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ClaimCard } from "@/components/ClaimCard";
 import { ConfidenceBar } from "@/components/ConfidenceBar";
+import { downloadTheoryPDF } from "@/components/TheoryPDF";
 import type { ClaimStatus, TheoryNode, TheoryResult } from "@/lib/types";
 
 interface Claim {
@@ -203,7 +204,23 @@ export default function TheoryPage() {
                   ))}
                 </div>
 
-                <p className="text-xs leading-relaxed opacity-80">{result.explanation}</p>
+                <p className="text-xs leading-relaxed opacity-80 mb-3">{result.explanation}</p>
+
+                <button
+                  onClick={() => downloadTheoryPDF({
+                    title,
+                    description,
+                    result,
+                    claims: Array.from(selectedClaims.keys()).map((id) => {
+                      const c = claims.find((cl) => cl.id === id)!;
+                      return { text: c.text, status: c.status, confidence: c.confidence };
+                    }),
+                    generatedAt: new Date().toLocaleDateString(),
+                  })}
+                  className="w-full py-1.5 rounded text-xs bg-white/5 hover:bg-white/10 text-gray-300 transition-colors border border-white/10"
+                >
+                  Export PDF
+                </button>
               </div>
             )}
           </div>
