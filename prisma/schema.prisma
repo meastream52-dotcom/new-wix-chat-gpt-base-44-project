@@ -7,48 +7,50 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Legacy Evidence AI models ───────────────────────────────────────────────
+
 model Document {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   title     String
   source    String
   text      String
   s3Key     String?
-  caseTag   String   @default("general")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  caseTag   String      @default("general")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
   claims    Claim[]
 }
 
 model Claim {
-  id         String   @id @default(uuid())
+  id         String      @id @default(uuid())
   text       String
   confidence Float
   status     ClaimStatus @default(PENDING)
   timeRef    String?
   entities   String[]
   documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+  document   Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
 }
 
 model Theory {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  claimIds    String[]
-  score       Float?
+  id             String   @id @default(uuid())
+  title          String
+  description    String
+  claimIds       String[]
+  score          Float?
   scoreBreakdown Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Contradiction {
-  id          String   @id @default(uuid())
-  claimAId    String
-  claimBId    String
-  reason      String
-  severity    Float
-  detectedAt  DateTime @default(now())
+  id         String   @id @default(uuid())
+  claimAId   String
+  claimBId   String
+  reason     String
+  severity   Float
+  detectedAt DateTime @default(now())
 }
 
 enum ClaimStatus {
@@ -58,75 +60,82 @@ enum ClaimStatus {
   REJECTED
 }
 
-model BlogUser {
-  id            String        @id @default(uuid())
-  email         String        @unique
-  name          String
-  password      String
-  role          BlogUserRole  @default(MEMBER)
-  avatar        String?
-  bio           String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  posts         BlogPost[]
-  subscription  BlogSubscription?
-  sessions      BlogSession[]
+// ─── Blog Platform models ─────────────────────────────────────────────────────
+
+model User {
+  id           String        @id @default(cuid())
+  name         String?
+  email        String        @unique
+  password     String?
+  image        String?
+  role         Role          @default(USER)
+  subscription String?
+  createdAt    DateTime      @default(now())
+  posts        Post[]
+  comments     Comment[]
 }
 
-model BlogSession {
-  id        String   @id @default(uuid())
+model Post {
+  id            String    @id @default(cuid())
+  title         String
+  slug          String    @unique
+  excerpt       String
+  content       String    @db.Text
+  featuredImage String?
+  published     Boolean   @default(false)
+  featured      Boolean   @default(false)
+  premium       Boolean   @default(false)
+  views         Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  comments Comment[]
+  tags     Tag[]
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  image       String?
+  posts       Post[]
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  posts Post[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  postId String
+  post   Post   @relation(fields: [postId], references: [id])
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
   userId    String
-  token     String   @unique
-  expiresAt DateTime
-  user      BlogUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeId  String
+  status    String
   createdAt DateTime @default(now())
 }
 
-model BlogCategory {
-  id          String     @id @default(uuid())
-  name        String
-  slug        String     @unique
-  description String?
-  color       String     @default("#E51C23")
-  sortOrder   Int        @default(0)
-  createdAt   DateTime   @default(now())
-  posts       BlogPost[]
-}
-
-model BlogPost {
-  id            String         @id @default(uuid())
-  title         String
-  slug          String         @unique
-  excerpt       String?
-  content       String         @db.Text
-  featuredImage String?
-  categoryId    String
-  category      BlogCategory   @relation(fields: [categoryId], references: [id])
-  authorId      String
-  author        BlogUser       @relation(fields: [authorId], references: [id])
-  status        BlogPostStatus @default(DRAFT)
-  featured      Boolean        @default(false)
-  views         Int            @default(0)
-  tags          String[]
-  publishedAt   DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-}
-
-model BlogSubscription {
-  id               String                 @id @default(uuid())
-  userId           String                 @unique
-  user             BlogUser               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan             BlogSubscriptionPlan   @default(FREE)
-  status           BlogSubscriptionStatus @default(ACTIVE)
-  stripeCustomerId String?
-  currentPeriodEnd DateTime?
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-}
-
-model BlogAdUnit {
-  id        String   @id @default(uuid())
+model AdUnit {
+  id        String   @id @default(cuid())
   name      String
   placement String
   code      String   @db.Text
@@ -134,26 +143,8 @@ model BlogAdUnit {
   createdAt DateTime @default(now())
 }
 
-enum BlogUserRole {
+enum Role {
+  USER
   ADMIN
-  MEMBER
-  SUBSCRIBER
-}
-
-enum BlogPostStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-enum BlogSubscriptionPlan {
-  FREE
-  PREMIUM
-  ANNUAL
-}
-
-enum BlogSubscriptionStatus {
-  ACTIVE
-  CANCELLED
-  EXPIRED
+  EDITOR
 }

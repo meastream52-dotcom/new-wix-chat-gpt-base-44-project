@@ -1,18 +1,22 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { Sidebar } from "@/components/Sidebar";
+import type { Metadata } from 'next';
+import './globals.css';
+import Header from '@/components/blog/Header';
+import Footer from '@/components/blog/Footer';
 
 export const metadata: Metadata = {
-  title: "Evidence AI — Structured Reasoning Platform",
-  description: "Ingest historical documents, extract atomic claims, build knowledge graphs, detect contradictions, score theories.",
+  title: 'CinemaRant — Entertainment News, Reviews & Analysis',
+  description: 'Your #1 source for movies, TV, gaming, music, and celebrity news. Breaking entertainment news and in-depth analysis.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="flex h-screen overflow-hidden bg-[#0f1117] text-[#e6edf3]">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+      <body className="bg-[#f7f7f7] text-gray-900 min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1">
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );
