@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -22,24 +22,24 @@ model Document {
 }
 
 model Claim {
-  id         String      @id @default(uuid())
+  id         String   @id @default(uuid())
   text       String
   confidence Float
-  status     ClaimStatus @default(PENDING)
+  status     String   @default("PENDING")
   timeRef    String?
-  entities   String[]
+  entities   String   @default("[]")
   documentId String
-  document   Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  createdAt  DateTime    @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
 }
 
 model Theory {
   id             String   @id @default(uuid())
   title          String
   description    String
-  claimIds       String[]
+  claimIds       String   @default("[]")
   score          Float?
-  scoreBreakdown Json?
+  scoreBreakdown String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -53,13 +53,6 @@ model Contradiction {
   detectedAt DateTime @default(now())
 }
 
-enum ClaimStatus {
-  PENDING
-  ACCEPTED
-  WEAK
-  REJECTED
-}
-
 // ─── Blog Platform models ─────────────────────────────────────────────────────
 
 model User {
@@ -68,7 +61,7 @@ model User {
   email        String        @unique
   password     String?
   image        String?
-  role         Role          @default(USER)
+  role         String        @default("USER")
   subscription String?
   createdAt    DateTime      @default(now())
   posts        Post[]
@@ -80,7 +73,7 @@ model Post {
   title         String
   slug          String    @unique
   excerpt       String
-  content       String    @db.Text
+  content       String
   featuredImage String?
   published     Boolean   @default(false)
   featured      Boolean   @default(false)
@@ -138,13 +131,8 @@ model AdUnit {
   id        String   @id @default(cuid())
   name      String
   placement String
-  code      String   @db.Text
+  code      String
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 }
 
-enum Role {
-  USER
-  ADMIN
-  EDITOR
-}
