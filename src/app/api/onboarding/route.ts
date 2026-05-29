@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AgentType } from "@prisma/client";
 
+export async function GET(req: NextRequest) {
+  try {
+    const businessId = req.nextUrl.searchParams.get("businessId");
+    if (!businessId) return NextResponse.json({ error: "businessId required" }, { status: 400 });
+
+    const business = await prisma.osBusiness.findUnique({
+      where: { id: businessId },
+      include: { agents: true },
+    });
+
+    if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 });
+    return NextResponse.json({ business });
+  } catch (err) {
+    console.error("[api/onboarding GET]", err);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
