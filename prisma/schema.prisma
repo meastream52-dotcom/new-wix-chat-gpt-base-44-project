@@ -57,3 +57,221 @@ enum ClaimStatus {
   WEAK
   REJECTED
 }
+
+// ─── AutomateOS Models ────────────────────────────────────────────────────────
+
+model OsUser {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String?
+  passwordHash String
+  role         UserRole  @default(OWNER)
+  businessId   String?
+  business     OsBusiness? @relation(fields: [businessId], references: [id])
+  auditLogs    AuditLog[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model OsBusiness {
+  id           String    @id @default(uuid())
+  name         String
+  industry     String?
+  description  String?
+  website      String?
+  phone        String?
+  address      String?
+  users        OsUser[]
+  agents       BusinessAgent[]
+  leads        OsLead[]
+  customers    OsCustomer[]
+  appointments OsAppointment[]
+  messages     OsMessage[]
+  workflows    OsWorkflow[]
+  documents    OsDocument[]
+  modules      TrainingModule[]
+  subscription OsSubscription?
+  auditLogs    AuditLog[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model BusinessAgent {
+  id           String    @id @default(uuid())
+  businessId   String
+  business     OsBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  agentType    AgentType
+  enabled      Boolean   @default(true)
+  systemPrompt String?
+  createdAt    DateTime  @default(now())
+
+  @@unique([businessId, agentType])
+}
+
+model OsLead {
+  id           String     @id @default(uuid())
+  businessId   String
+  business     OsBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  email        String?
+  phone        String?
+  company      String?
+  status       LeadStatus @default(NEW)
+  notes        String?
+  value        Float?
+  source       String?
+  appointments OsAppointment[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model OsCustomer {
+  id           String     @id @default(uuid())
+  businessId   String
+  business     OsBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  email        String?
+  phone        String?
+  company      String?
+  notes        String?
+  appointments OsAppointment[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model OsAppointment {
+  id           String     @id @default(uuid())
+  businessId   String
+  business     OsBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  leadId       String?
+  lead         OsLead?    @relation(fields: [leadId], references: [id])
+  customerId   String?
+  customer     OsCustomer? @relation(fields: [customerId], references: [id])
+  title        String
+  startAt      DateTime
+  endAt        DateTime
+  status       ApptStatus @default(SCHEDULED)
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model OsMessage {
+  id           String    @id @default(uuid())
+  businessId   String
+  business     OsBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  agentType    AgentType
+  role         String
+  content      String
+  sessionId    String
+  createdAt    DateTime  @default(now())
+}
+
+model OsWorkflow {
+  id           String    @id @default(uuid())
+  businessId   String
+  business     OsBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  trigger      String
+  action       String
+  enabled      Boolean   @default(true)
+  lastRunAt    DateTime?
+  runCount     Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model OsDocument {
+  id           String      @id @default(uuid())
+  businessId   String
+  business     OsBusiness  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name         String
+  fileType     String?
+  fileSize     Int?
+  s3Key        String?
+  text         String?
+  status       DocStatus   @default(PENDING)
+  extracted    ExtractedDocumentData[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model ExtractedDocumentData {
+  id           String     @id @default(uuid())
+  documentId   String
+  document     OsDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fieldName    String
+  fieldValue   String
+  confidence   Float      @default(1.0)
+  createdAt    DateTime   @default(now())
+}
+
+model TrainingModule {
+  id           String     @id @default(uuid())
+  businessId   String
+  business     OsBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  title        String
+  content      String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model OsSubscription {
+  id                String    @id @default(uuid())
+  businessId        String    @unique
+  business          OsBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  tier              String    @default("STARTER")
+  status            String    @default("ACTIVE")
+  currentPeriodEnd  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model AuditLog {
+  id           String     @id @default(uuid())
+  businessId   String
+  business     OsBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         OsUser?    @relation(fields: [userId], references: [id])
+  action       String
+  entity       String
+  entityId     String?
+  metadata     Json?
+  createdAt    DateTime   @default(now())
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  EMPLOYEE
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  LOST
+}
+
+enum ApptStatus {
+  SCHEDULED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum DocStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum AgentType {
+  RECEPTIONIST
+  SALES_FOLLOWUP
+  SUPPORT
+  DOCUMENT
+  TRAINING
+}
