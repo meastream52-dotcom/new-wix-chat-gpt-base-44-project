@@ -57,3 +57,120 @@ enum ClaimStatus {
   WEAK
   REJECTED
 }
+
+// ─── Autonomous Software Company (ASC) models ───────────────────────────────
+
+model AscProject {
+  id          String           @id @default(uuid())
+  name        String
+  description String
+  status      AscProjectStatus @default(INITIALIZING)
+  customerId  String           @default("anonymous")
+  tasks       AscTask[]
+  artifacts   AscArtifact[]
+  deployments AscDeployment[]
+  costEntries AscCostEntry[]
+  messages    AscMessage[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model AscTask {
+  id          String        @id @default(uuid())
+  projectId   String
+  project     AscProject    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  agentRole   String
+  type        String
+  status      AscTaskStatus @default(PENDING)
+  input       Json?
+  output      Json?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+}
+
+model AscArtifact {
+  id        String          @id @default(uuid())
+  projectId String
+  project   AscProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      AscArtifactType
+  name      String
+  content   String
+  version   Int             @default(1)
+  createdAt DateTime        @default(now())
+}
+
+model AscDeployment {
+  id          String              @id @default(uuid())
+  projectId   String
+  project     AscProject          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environment String
+  url         String?
+  status      AscDeploymentStatus @default(PENDING)
+  logs        String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model AscMessage {
+  id            String         @id @default(uuid())
+  projectId     String
+  project       AscProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fromAgentRole String
+  toAgentRole   String?
+  content       String
+  type          AscMessageType @default(INFO)
+  timestamp     DateTime       @default(now())
+}
+
+model AscCostEntry {
+  id        String     @id @default(uuid())
+  projectId String
+  project   AscProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  agentRole String
+  tokens    Int
+  cost      Float
+  timestamp DateTime   @default(now())
+}
+
+enum AscProjectStatus {
+  INITIALIZING
+  RUNNING
+  COMPLETED
+  FAILED
+  PAUSED
+}
+
+enum AscTaskStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum AscArtifactType {
+  PRD
+  ARCHITECTURE
+  FRONTEND_CODE
+  BACKEND_CODE
+  DATABASE_SCHEMA
+  TESTS
+  DOCUMENTATION
+  DEPLOYMENT_CONFIG
+}
+
+enum AscDeploymentStatus {
+  PENDING
+  BUILDING
+  DEPLOYED
+  FAILED
+}
+
+enum AscMessageType {
+  INFO
+  SUCCESS
+  ERROR
+  WARNING
+  PROGRESS
+}
