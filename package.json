@@ -1,6 +1,6 @@
 {
-  "name": "evidence-ai",
-  "version": "0.1.0",
+  "name": "builderai",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,15 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "seed:demo": "npx tsx scripts/seed-demo.ts"
+    "seed:demo": "npx tsx scripts/seed-demo.ts",
+    "setup": "bash scripts/setup.sh setup",
+    "agent:setup": "npx tsx src/agents/setupAgent.ts setup",
+    "agent:run": "npx tsx src/agents/setupAgent.ts run",
+    "agent:deploy": "npx tsx src/agents/setupAgent.ts deploy",
+    "agent:deploy:prod": "npx tsx src/agents/setupAgent.ts deploy --prod",
+    "agent:debug": "npx tsx src/agents/setupAgent.ts debug",
+    "agent:finetune": "npx tsx src/agents/setupAgent.ts finetune",
+    "agent:status": "npx tsx src/agents/setupAgent.ts status"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
