@@ -3,6 +3,9 @@
 import { usePathname } from "next/navigation";
 import { IconMenu } from "./icons";
 import { UserMenu } from "./UserMenu";
+import type { Session } from "next-auth";
+
+type SessionUser = Session["user"];
 
 const SECTION_LABELS: Record<string, string> = {
   "/dashboard":          "Projects",
@@ -12,7 +15,6 @@ const SECTION_LABELS: Record<string, string> = {
 };
 
 function getSectionLabel(path: string): string {
-  // Exact match first, then longest prefix
   if (SECTION_LABELS[path]) return SECTION_LABELS[path];
   const match = Object.keys(SECTION_LABELS)
     .filter((k) => path.startsWith(k) && k !== "/dashboard")
@@ -20,19 +22,31 @@ function getSectionLabel(path: string): string {
   return match ? SECTION_LABELS[match] : "Dashboard";
 }
 
-interface TopBarProps {
-  onMenuToggle: () => void;
+function getInitials(user: SessionUser): string {
+  const { name, email } = user;
+  if (name) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+  if (email) return email.slice(0, 2).toUpperCase();
+  return "?";
 }
 
-export function TopBar({ onMenuToggle }: TopBarProps) {
+interface TopBarProps {
+  onMenuToggle: () => void;
+  user: SessionUser;
+}
+
+export function TopBar({ onMenuToggle, user }: TopBarProps) {
   const path = usePathname();
   const section = getSectionLabel(path);
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-4 shrink-0">
-      {/* Left: hamburger (mobile) + breadcrumb */}
       <div className="flex items-center gap-3">
-        {/* Hamburger — only visible on mobile (hidden on md+) */}
         <button
           onClick={onMenuToggle}
           className="md:hidden flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-panel hover:text-[#e6edf3] transition-colors"
@@ -43,7 +57,6 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
           </span>
         </button>
 
-        {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
           <span className="hidden md:inline text-muted">Platform</span>
           <span className="hidden md:inline text-border">/</span>
@@ -51,11 +64,10 @@ export function TopBar({ onMenuToggle }: TopBarProps) {
         </div>
       </div>
 
-      {/* Right: user menu */}
       <UserMenu
-        name="Alex Johnson"
-        email="alex@platform.ai"
-        initials="AJ"
+        name={user.name ?? user.email ?? "User"}
+        email={user.email ?? ""}
+        initials={getInitials(user)}
       />
     </header>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { signOut } from "next-auth/react";
 import { clsx } from "clsx";
 import { IconChevronDown, IconLogOut, IconSettings } from "./icons";
 
@@ -74,7 +75,7 @@ export function UserMenu({ name, email, initials }: UserMenuProps) {
             </button>
             <button
               className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-danger hover:bg-danger/5 transition-colors text-left"
-              onClick={() => setOpen(false)}
+              onClick={() => signOut({ callbackUrl: "/login" })}
             >
               <span className="w-4 h-4">
                 <IconLogOut />
