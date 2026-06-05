@@ -39,7 +39,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   };
 
   useEffect(() => {
-    fetchProject();
+    void fetchProject();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const startPipeline = async () => {
