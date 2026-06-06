@@ -9,17 +9,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        surface: "#0f1117",
-        panel: "#161b22",
-        border: "#21262d",
-        accent: "#58a6ff",
-        danger: "#f85149",
-        success: "#3fb950",
-        warning: "#d29922",
-        muted: "#8b949e",
+        navy: {
+          50: "#e8edf5",
+          100: "#c5d2e8",
+          200: "#9fb4d8",
+          300: "#7896c8",
+          400: "#5a7dbb",
+          500: "#3d65ae",
+          600: "#2e52a0",
+          700: "#1d3d8e",
+          800: "#0f2b74",
+          900: "#0A2744",
+          950: "#061529",
+        },
+        ocean: {
+          500: "#1565C0",
+          600: "#1158b0",
+          700: "#0c479a",
+        },
+        gold: {
+          400: "#fbbf24",
+          500: "#F59E0B",
+          600: "#d97706",
+        },
       },
       fontFamily: {
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
       },
     },
   },

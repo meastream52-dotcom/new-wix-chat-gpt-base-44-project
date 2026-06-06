@@ -1,20 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
-}
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   height: 100%;
-  background-color: #0f1117;
-  color: #e6edf3;
+  background-color: #ffffff;
+  color: #1e293b;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
 }
 
 ::-webkit-scrollbar {
@@ -22,12 +25,32 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f1117;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #21262d;
+  background: #cbd5e1;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #30363d;
+  background: #94a3b8;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.chat-enter {
+  animation: slideUp 0.2s ease-out;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #1565C0, #F59E0B);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-gradient {
+  background: linear-gradient(135deg, #0A2744 0%, #1565C0 60%, #0A2744 100%);
 }

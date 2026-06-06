@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ── Evidence AI models (preserved) ────────────────────────────────────────
+
 model Document {
   id        String   @id @default(uuid())
   title     String
@@ -20,35 +22,35 @@ model Document {
 }
 
 model Claim {
-  id         String   @id @default(uuid())
+  id         String      @id @default(uuid())
   text       String
   confidence Float
   status     ClaimStatus @default(PENDING)
   timeRef    String?
   entities   String[]
   documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+  document   Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
 }
 
 model Theory {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  claimIds    String[]
-  score       Float?
+  id             String   @id @default(uuid())
+  title          String
+  description    String
+  claimIds       String[]
+  score          Float?
   scoreBreakdown Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Contradiction {
-  id          String   @id @default(uuid())
-  claimAId    String
-  claimBId    String
-  reason      String
-  severity    Float
-  detectedAt  DateTime @default(now())
+  id         String   @id @default(uuid())
+  claimAId   String
+  claimBId   String
+  reason     String
+  severity   Float
+  detectedAt DateTime @default(now())
 }
 
 enum ClaimStatus {
@@ -56,4 +58,73 @@ enum ClaimStatus {
   ACCEPTED
   WEAK
   REJECTED
+}
+
+// ── Ocean Label models ─────────────────────────────────────────────────────
+
+model QuoteRequest {
+  id              String   @id @default(uuid())
+  // Contact
+  name            String
+  company         String?
+  email           String
+  phone           String?
+  notes           String?
+  // Label specs
+  material        String
+  shape           String
+  widthIn         Float
+  heightIn        Float
+  quantity        Int
+  colors          Int
+  finish          String
+  hasBarcode      Boolean  @default(false)
+  hasVariableData Boolean  @default(false)
+  isReorder       Boolean  @default(false)
+  // Estimate
+  estimateLow     Float?
+  estimateHigh    Float?
+  // Status
+  status          QuoteStatus @default(PENDING)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum QuoteStatus {
+  PENDING
+  QUOTED
+  WON
+  LOST
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  company   String?
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model BlogPost {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String
+  category    String
+  excerpt     String
+  content     String
+  published   Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WaitlistEntry {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  source    String   @default("portal")
+  createdAt DateTime @default(now())
 }

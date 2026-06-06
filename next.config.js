@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ["neo4j-driver"],
+  serverExternalPackages: ["neo4j-driver"],
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "oceanlabel.com" }],
   },
 };
 
