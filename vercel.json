@@ -2,20 +2,15 @@
   "framework": "nextjs",
   "buildCommand": "npx prisma generate && next build",
   "installCommand": "npm install",
-  "env": {
-    "DATABASE_URL": "@evidence-database-url",
-    "OPENAI_API_KEY": "@evidence-openai-key",
-    "OPENAI_MODEL": "gpt-4o",
-    "NEO4J_URI": "@evidence-neo4j-uri",
-    "NEO4J_USER": "@evidence-neo4j-user",
-    "NEO4J_PASSWORD": "@evidence-neo4j-password",
-    "REDIS_URL": "@evidence-redis-url"
-  },
-  "regions": ["iad1"],
+  "regions": ["sfo1"],
   "functions": {
-    "src/app/api/extract/route.ts": { "maxDuration": 60 },
-    "src/app/api/judge/route.ts":   { "maxDuration": 60 },
-    "src/app/api/graph/route.ts":   { "maxDuration": 60 },
-    "src/app/api/theory/route.ts":  { "maxDuration": 60 }
+    "src/app/api/chat/route.ts":          { "maxDuration": 30 },
+    "src/app/api/quote/route.ts":         { "maxDuration": 15 },
+    "src/app/api/contact/route.ts":       { "maxDuration": 15 },
+    "src/app/api/generate-blog/route.ts": { "maxDuration": 60 },
+    "src/app/api/extract/route.ts":       { "maxDuration": 60 },
+    "src/app/api/judge/route.ts":         { "maxDuration": 60 },
+    "src/app/api/graph/route.ts":         { "maxDuration": 60 },
+    "src/app/api/theory/route.ts":        { "maxDuration": 60 }
   }
 }
