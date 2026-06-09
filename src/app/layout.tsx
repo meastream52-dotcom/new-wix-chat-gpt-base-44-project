@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Sidebar } from "@/components/Sidebar";
+import { Providers } from "@/components/Providers";
+import { LayoutRouter } from "@/components/LayoutRouter";
 
 export const metadata: Metadata = {
-  title: "Evidence AI — Structured Reasoning Platform",
-  description: "Ingest historical documents, extract atomic claims, build knowledge graphs, detect contradictions, score theories.",
+  title: "AutomateOS — AI Workforce for Your Business",
+  description: "Your AI workforce — one dashboard. AI receptionist, sales, support, training, and more.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="flex h-screen overflow-hidden bg-[#0f1117] text-[#e6edf3]">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+      <body className="bg-[#0f1117] text-[#e6edf3]">
+        <Providers>
+          <LayoutRouter>{children}</LayoutRouter>
+        </Providers>
       </body>
     </html>
   );
