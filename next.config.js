@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ["neo4j-driver"],
-  },
+  serverExternalPackages: ["neo4j-driver", "bcryptjs"],
 };
 
 module.exports = nextConfig;

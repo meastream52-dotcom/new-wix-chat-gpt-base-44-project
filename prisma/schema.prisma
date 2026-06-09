@@ -57,3 +57,224 @@ enum ClaimStatus {
   WEAK
   REJECTED
 }
+
+// ─── Software Builder Platform ───────────────────────────────────────────────
+
+model User {
+  id                   String                 @id @default(cuid())
+  email                String                 @unique
+  name                 String?
+  passwordHash         String?
+  image                String?
+  plan                 Plan                   @default(FREE)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  projects             Project[]
+  conversations        Conversation[]
+  subscriptions        PlatformSubscription[]
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model Project {
+  id            String               @id @default(cuid())
+  userId        String
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  prompt        String               @db.Text
+  status        ProjectStatus        @default(PENDING)
+  techStack     Json?
+  repoUrl       String?
+  deployUrl     String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  agentRuns     AgentRun[]
+  tasks         AgentTask[]
+  files         GeneratedFile[]
+  approvals     Approval[]
+  conversations Conversation[]
+  deployments   PlatformDeployment[]
+  logs          AgentLog[]
+}
+
+enum ProjectStatus {
+  PENDING
+  PLANNING
+  BUILDING
+  TESTING
+  REVIEW
+  DEPLOYED
+  FAILED
+  PAUSED
+}
+
+model AgentRun {
+  id          String      @id @default(cuid())
+  projectId   String
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        AgentType
+  status      AgentStatus @default(PENDING)
+  input       Json?
+  output      Json?
+  logs        Json        @default("[]")
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  tasks       AgentTask[]
+}
+
+enum AgentType {
+  ORCHESTRATOR
+  PRODUCT_MANAGER
+  UI_UX
+  FRONTEND
+  BACKEND
+  DATABASE
+  TESTING
+  SECURITY
+  DEVOPS
+  DOCUMENTATION
+  BILLING_AGENT
+  DEBUGGING
+  INTEGRATION
+}
+
+enum AgentStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  WAITING_APPROVAL
+}
+
+model AgentTask {
+  id           String     @id @default(cuid())
+  projectId    String
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  agentRunId   String?
+  agentRun     AgentRun?  @relation(fields: [agentRunId], references: [id])
+  type         String
+  status       TaskStatus @default(PENDING)
+  priority     Int        @default(0)
+  dependencies Json?
+  result       Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  BLOCKED
+}
+
+model GeneratedFile {
+  id        String     @id @default(cuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  path      String
+  content   String     @db.Text
+  language  String?
+  version   Int        @default(1)
+  agentType AgentType?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([projectId, path])
+}
+
+model Approval {
+  id          String         @id @default(cuid())
+  projectId   String
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        ApprovalType
+  description String
+  metadata    Json?
+  status      ApprovalStatus @default(PENDING)
+  requestedAt DateTime       @default(now())
+  resolvedAt  DateTime?
+}
+
+enum ApprovalType {
+  DEPLOY
+  DELETE_FILES
+  SPEND_MONEY
+  SEND_EMAIL
+  CHANGE_API_KEY
+  MODIFY_BILLING
+  ACCESS_PRIVATE_DATA
+  CREATE_CLOUD_RESOURCE
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  messages  Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlatformDeployment {
+  id          String           @id @default(cuid())
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environment String           @default("production")
+  url         String?
+  status      DeploymentStatus @default(PENDING)
+  deployedAt  DateTime?
+  createdAt   DateTime         @default(now())
+}
+
+enum DeploymentStatus {
+  PENDING
+  IN_PROGRESS
+  DEPLOYED
+  FAILED
+  ROLLED_BACK
+}
+
+model PlatformSubscription {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan             Plan
+  status           String   @default("active")
+  currentPeriodEnd DateTime?
+  createdAt        DateTime @default(now())
+}
+
+model AgentLog {
+  id        String     @id @default(cuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  agentType AgentType?
+  level     LogLevel   @default(INFO)
+  message   String     @db.Text
+  metadata  Json?
+  createdAt DateTime   @default(now())
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+}
