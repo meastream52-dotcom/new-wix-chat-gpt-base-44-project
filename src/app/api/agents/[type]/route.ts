@@ -75,15 +75,46 @@ export async function GET(
     if (!businessId) return NextResponse.json({ error: "businessId required" }, { status: 400 });
 
     const agentTypeRaw = type.toUpperCase() as AgentType;
-    const messages = await prisma.osMessage.findMany({
-      where: { businessId, agentType: agentTypeRaw },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
+    const [messages, agentConfig] = await Promise.all([
+      prisma.osMessage.findMany({
+        where: { businessId, agentType: agentTypeRaw },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+      prisma.businessAgent.findUnique({
+        where: { businessId_agentType: { businessId, agentType: agentTypeRaw } },
+      }),
+    ]);
 
-    return NextResponse.json({ messages });
+    return NextResponse.json({ messages, config: agentConfig });
   } catch (err) {
     console.error("[api/agents GET]", err);
     return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ type: string }> }
+) {
+  try {
+    const { type } = await params;
+    const { businessId, systemPrompt, enabled } = await req.json();
+    if (!businessId) return NextResponse.json({ error: "businessId required" }, { status: 400 });
+
+    const agentTypeRaw = type.toUpperCase() as AgentType;
+    const config = await prisma.businessAgent.upsert({
+      where: { businessId_agentType: { businessId, agentType: agentTypeRaw } },
+      update: {
+        ...(systemPrompt !== undefined ? { systemPrompt } : {}),
+        ...(enabled !== undefined ? { enabled } : {}),
+      },
+      create: { businessId, agentType: agentTypeRaw, enabled: enabled ?? true, systemPrompt },
+    });
+
+    return NextResponse.json({ config, ok: true });
+  } catch (err) {
+    console.error("[api/agents PATCH]", err);
+    return NextResponse.json({ error: "Failed to save" }, { status: 500 });
   }
 }
