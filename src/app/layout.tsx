@@ -1,19 +1,15 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { Sidebar } from "@/components/Sidebar";
+import type { Metadata } from 'next'
+import './globals.css'
 
 export const metadata: Metadata = {
-  title: "Evidence AI — Structured Reasoning Platform",
-  description: "Ingest historical documents, extract atomic claims, build knowledge graphs, detect contradictions, score theories.",
-};
+  title: 'PrintForge — Custom 3D Printing',
+  description: 'Custom 3D printed parts, fast. Discontinued, overpriced, or one-of-a-kind — we print it.',
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="flex h-screen overflow-hidden bg-[#0f1117] text-[#e6edf3]">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">{children}</main>
-      </body>
+      <body className="bg-white text-gray-900">{children}</body>
     </html>
-  );
+  )
 }

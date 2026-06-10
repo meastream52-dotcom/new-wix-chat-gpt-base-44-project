@@ -3,31 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --color-orange: #f97316;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html,
-body {
+html, body {
   height: 100%;
-  background-color: #0f1117;
-  color: #e6edf3;
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0f1117;
-}
-::-webkit-scrollbar-thumb {
-  background: #21262d;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #30363d;
 }
