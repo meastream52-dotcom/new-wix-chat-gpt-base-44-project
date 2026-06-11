@@ -1,75 +1,57 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 
-const PIPELINE = [
-  { step: "01", label: "Upload", desc: "Ingest historical or legal documents into the vault", href: "/vault" },
-  { step: "02", label: "Extract", desc: "AI breaks documents into atomic, verifiable claims", href: "/claims" },
-  { step: "03", label: "Judge", desc: "Claims are filtered and scored by confidence", href: "/claims" },
-  { step: "04", label: "Graph", desc: "Entities and claims form a knowledge graph", href: "/graph" },
-  { step: "05", label: "Contradict", desc: "Temporal and semantic inconsistencies surface as red edges", href: "/graph" },
-  { step: "06", label: "Theorize", desc: "Build a theory from claims and receive a scored verdict", href: "/theory" },
-];
+export const revalidate = 60;
 
-const CASES = [
-  { tag: "marilyn-monroe", label: "Marilyn Monroe", status: "Active" },
-  { tag: "jfk", label: "JFK Assassination", status: "Active" },
-  { tag: "mlk", label: "MLK Archives", status: "Coming soon" },
-];
+export default async function CatalogPage() {
+  const supabase = createClient();
+  const { data: products } = await supabase
+    .from("products")
+    .select("id, title, description, render_paths, product_tiers(price_cents, available)")
+    .eq("status", "published")
+    .order("created_at", { ascending: false });
 
-export default function Home() {
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="mb-10">
-        <h1 className="text-2xl font-mono font-bold text-[#e6edf3] mb-2">Evidence AI</h1>
-        <p className="text-[#8b949e]">
-          Structured reasoning infrastructure for contested historical information.
+    <div>
+      <section className="mb-10 rounded-xl bg-ink-900 px-8 py-12 text-white">
+        <h1 className="text-3xl font-bold">
+          The part that doesn&apos;t exist anymore? We make it.
+        </h1>
+        <p className="mt-3 max-w-xl text-ink-100">
+          Discontinued trim, obsolete brackets, parts too niche for anyone to
+          stock — designed by AI, reviewed by a human, printed in-house.
         </p>
-      </div>
-
-      <section className="mb-10">
-        <h2 className="text-xs font-mono text-[#8b949e] uppercase mb-4">Pipeline</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {PIPELINE.map(({ step, label, desc, href }) => (
-            <Link
-              key={step}
-              href={href}
-              className="flex gap-4 p-4 rounded-lg border border-[#21262d] bg-[#161b22] hover:border-[#30363d] transition-colors"
-            >
-              <span className="font-mono text-xs text-[#58a6ff] shrink-0 mt-0.5">{step}</span>
-              <div>
-                <div className="text-sm font-medium text-gray-200 mb-0.5">{label}</div>
-                <div className="text-xs text-[#8b949e]">{desc}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <Link href="/request" className="btn-primary mt-6">
+          Request a custom part
+        </Link>
       </section>
 
-      <section>
-        <h2 className="text-xs font-mono text-[#8b949e] uppercase mb-4">Case Datasets</h2>
-        <div className="space-y-2">
-          {CASES.map(({ tag, label, status }) => (
-            <div
-              key={tag}
-              className="flex items-center justify-between p-4 rounded-lg border border-[#21262d] bg-[#161b22]"
-            >
-              <div className="flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-[#58a6ff]" />
-                <span className="text-sm text-gray-200">{label}</span>
-                <span className="text-xs font-mono text-[#8b949e]">{tag}</span>
-              </div>
-              <span
-                className={
-                  status === "Active"
-                    ? "text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded"
-                    : "text-xs text-[#8b949e] bg-[#21262d] px-2 py-0.5 rounded"
-                }
-              >
-                {status}
-              </span>
-            </div>
-          ))}
+      <h2 className="mb-4 text-xl font-semibold">Catalog</h2>
+      {!products?.length ? (
+        <p className="text-ink-400">
+          No products published yet — check back soon, or request a custom part.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {products.map((p) => {
+            const prices = (p.product_tiers ?? [])
+              .filter((t) => t.available)
+              .map((t) => t.price_cents);
+            const from = prices.length ? Math.min(...prices) : null;
+            return (
+              <Link key={p.id} href={`/products/${p.id}`} className="card hover:border-forge-500">
+                <h3 className="font-semibold">{p.title}</h3>
+                <p className="mt-1 line-clamp-3 text-sm text-ink-600">{p.description}</p>
+                {from !== null && (
+                  <p className="mt-3 text-sm font-medium text-forge-700">
+                    from ${(from / 100).toFixed(2)}
+                  </p>
+                )}
+              </Link>
+            );
+          })}
         </div>
-      </section>
+      )}
     </div>
   );
 }

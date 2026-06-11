@@ -1,84 +1,48 @@
-# Evidence AI — Codebase Guide
+# CLAUDE.md — PrintForge
 
-## What this is
-Structured reasoning platform: ingest historical documents → extract atomic claims → validate → build knowledge graph → detect contradictions → score user-built theories.
+AI-agent-powered 3D printing business platform (Phase 1 MVP). Next.js 14 App
+Router + Tailwind, Supabase (Postgres/Auth/Storage/RLS), Stripe Checkout,
+Anthropic API for all agents.
 
-## Tech stack
-- **Framework**: Next.js 16 (App Router), TypeScript
-- **Database**: PostgreSQL via Prisma ORM
-- **Graph DB**: Neo4j (knowledge graph)
-- **Queue**: Redis (job queue)
-- **Storage**: AWS S3 (document files)
-- **LLM**: OpenAI GPT-4o (agents)
-- **Visualization**: D3.js force graph
+## Commands
 
-## Local setup
+- `npm run dev` — dev server
+- `npm run typecheck` — `tsc --noEmit` (no test suite yet)
+- `npm run build` — production build
 
-```bash
-cp .env.example .env      # fill in your credentials
-npm install
-npx prisma db push        # create tables
-npm run seed:demo         # load demo data (no API keys needed)
-npm run dev               # http://localhost:3000
-```
+## Architecture rules
 
-## Key directories
+- **Pipeline, not free-for-all**: agents run in order
+  Intake → Design → Material/Pricing → Listing, each advanced by an operator
+  approval gate (API routes under `src/app/api/admin/requests/[id]/`).
+  `custom_requests.status` is the state machine:
+  `submitted → intake_review → design → pricing → listing → published`
+  (or `rejected` at any point).
+- **Agents** live in `src/agents/`, one file each, called only from API
+  routes. All Claude calls go through `runAgent()` in `src/lib/anthropic.ts`,
+  which logs tokens + cost to `agent_runs`. Never call the Anthropic SDK
+  directly from an agent.
+- **Prices are deterministic.** Models pick materials; `src/lib/pricing.ts`
+  computes prices. Never let a model output a price.
+- **Safety constraints live in the Intake Agent's system prompt**
+  (`src/agents/intake.ts`) and the Listing Agent's IP block. Do not weaken
+  them: no structural/load-bearing/safety-critical parts; IP-flagged requests
+  are personal-use one-offs and must never become catalog listings.
+- **Supabase clients**: `lib/supabase/server.ts` (cookie/anon, RLS applies)
+  for reads in pages; `lib/supabase/admin.ts` (service role, bypasses RLS)
+  only in API routes and agents. Never import the admin client in a client
+  component.
+- Admin access = `profiles.role = 'admin'`; checked via `getAdminUser()` in
+  every `/api/admin/*` route and the `/admin` layout.
+- **Phase discipline**: do not scaffold Phase 2/3 features (order ops agent,
+  marketing agent, n8n, multi-tenant dropship, Stripe Connect) unless
+  explicitly asked. The only Phase 3 trace allowed is the
+  `DROPSHIP_MULTIPLIER` constant.
 
-```
-src/
-  agents/       # AI pipeline agents (extractor, judge, graphBuilder, contradictionDetector, theoryScorer)
-  app/api/      # API routes: /upload /extract /judge /graph /theory
-  app/          # Pages: / /vault /claims /graph /theory
-  components/   # UI: EvidenceRow, ClaimCard, ConfidenceBar, Sidebar, InspectorPanel, GraphCanvas
-  lib/          # Clients: db (Prisma), openai, neo4j, redis, s3, types
-scripts/
-  seed-demo.ts  # Populates DB with Marilyn Monroe + JFK demo data
-```
+## Conventions
 
-## Pipeline flow
-
-```
-Document → /api/extract → /api/judge → /api/graph → /api/theory
-             (claims)     (filter)    (Neo4j+contradictions) (score)
-```
-
-## Agent contracts
-
-| Agent | Input | Output |
-|---|---|---|
-| Extractor | raw document text | `RawClaim[]` (text, confidence, timeRef, entities) |
-| Judge | `RawClaim[]` | status: ACCEPTED / WEAK / REJECTED |
-| GraphBuilder | judged claims | Neo4j nodes + edges |
-| ContradictionDetector | documentId | `Contradiction[]` + CONTRADICTS edges in Neo4j |
-| TheoryScorer | theoryId + `TheoryNode[]` | score 0–1, verdict, breakdown |
-
-## Demo flow (Kickstarter)
-
-1. `/vault` — documents are pre-loaded by `npm run seed:demo`
-2. Click **Extract** on any document → claims appear in `/claims`
-3. Click **Judge** → claims get ACCEPTED/WEAK/REJECTED status
-4. Click **Graph** → redirects to `/graph` with D3 force visualization
-5. Red dashed edges = contradictions detected automatically
-6. `/theory` → select claims, score your theory
-
-## Environment variables
-
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `OPENAI_API_KEY` | GPT-4o API key |
-| `OPENAI_MODEL` | Model override (default: gpt-4o) |
-| `NEO4J_URI` | bolt://... |
-| `NEO4J_USER` / `NEO4J_PASSWORD` | Neo4j credentials |
-| `REDIS_URL` | Redis connection string |
-| `AWS_*` / `S3_BUCKET` | S3 credentials (optional for text-only mode) |
-
-## Common commands
-
-```bash
-npm run dev           # dev server
-npx tsc --noEmit      # type check
-npm run seed:demo     # reset + load demo data
-npx prisma studio     # browse DB in browser
-npm run db:migrate    # run migrations
-```
+- Money is integer cents in Postgres (`*_cents`), formatted only at render.
+- Agent JSON contracts are documented in `src/lib/types.ts`; agents reply
+  with a single fenced ```json object parsed by `extractJson()`.
+- Default model `claude-opus-4-8` (override with `ANTHROPIC_MODEL`); pricing
+  table for cost logging is in `src/lib/anthropic.ts`.

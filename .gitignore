@@ -8,6 +8,7 @@ dist/
 *.pem
 .DS_Store
 *.log
-prisma/dev.db
-prisma/dev.db-journal
-tsconfig.tsbuildinfo
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+/tmp
