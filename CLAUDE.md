@@ -1,84 +1,52 @@
-# Evidence AI — Codebase Guide
+# EchoBlog — guidance for AI assistants
 
-## What this is
-Structured reasoning platform: ingest historical documents → extract atomic claims → validate → build knowledge graph → detect contradictions → score user-built theories.
+Monetized blogging platform (Medium-style with 50/40/10 revenue sharing).
+Next.js 15 App Router + TypeScript, Prisma/Postgres, Clerk (dev-auth fallback),
+Stripe Billing + Connect, optional Redis.
 
-## Tech stack
-- **Framework**: Next.js 16 (App Router), TypeScript
-- **Database**: PostgreSQL via Prisma ORM
-- **Graph DB**: Neo4j (knowledge graph)
-- **Queue**: Redis (job queue)
-- **Storage**: AWS S3 (document files)
-- **LLM**: OpenAI GPT-4o (agents)
-- **Visualization**: D3.js force graph
+## Commands
 
-## Local setup
+- `npm run dev` / `npm run build` / `npm run typecheck` / `npm test`
+- `npm run db:push` (schema), `npm run seed:demo` (demo data + fraud fixtures)
+- Local services: `docker compose up -d` (Postgres + Redis)
 
-```bash
-cp .env.example .env      # fill in your credentials
-npm install
-npx prisma db push        # create tables
-npm run seed:demo         # load demo data (no API keys needed)
-npm run dev               # http://localhost:3000
-```
+## Hard rules — do not weaken these
 
-## Key directories
+1. **Money is integer cents (BigInt) everywhere.** No floats touch amounts.
+   Score → cents conversion goes through `lib/revenue/allocate.ts` only.
+2. **All earnings flow through the ledger.** Nothing pays out unless a
+   LedgerEntry is status `approved`, and only `lib/payouts/run.ts` moves money.
+3. **No self-engagement earns points** (own posts/comments/likes/reads), and
+   every point source has a daily cap. Exclusions live in
+   `lib/revenue/scores.ts` — the estimator and the month-end close both call
+   it, so never fork that logic.
+4. **DB is the enforcement layer; Redis only assists.** The 2 posts/day limit
+   is checked in `lib/limits.ts` against Postgres.
+5. **Webhooks are idempotent** via the `stripe_events` table; the payout job is
+   idempotent via atomic entry claiming + Stripe idempotency keys
+   (`${batchId}:${userId}` — format is asserted by tests, never change it).
+6. Admin mutations require ADMIN role and must call `logAudit()`. Non-staff
+   gets 404 (not 403) on /admin.
+7. Revenue split and tunables come from the `platform_config` table
+   (`lib/config.ts`), never hardcoded.
 
-```
-src/
-  agents/       # AI pipeline agents (extractor, judge, graphBuilder, contradictionDetector, theoryScorer)
-  app/api/      # API routes: /upload /extract /judge /graph /theory
-  app/          # Pages: / /vault /claims /graph /theory
-  components/   # UI: EvidenceRow, ClaimCard, ConfidenceBar, Sidebar, InspectorPanel, GraphCanvas
-  lib/          # Clients: db (Prisma), openai, neo4j, redis, s3, types
-scripts/
-  seed-demo.ts  # Populates DB with Marilyn Monroe + JFK demo data
-```
+## Layout
 
-## Pipeline flow
+- `src/lib/engagement/` — heartbeat constants, event tracking (caps), session close
+- `src/lib/revenue/` — scores (shared), allocate (pure BigInt math), estimate, calculatePeriod, getMonthlyRevenueCents
+- `src/lib/payouts/run.ts` — preview + execution (the only real-money code path)
+- `src/lib/fraud/` — rules (one module each) + scan orchestrator with reversible consequences
+- `src/app/api/cron/*` — guarded by `Authorization: Bearer ${CRON_SECRET}`
+- `src/app/admin/*` — layout-level role guard
+- `tests/` — vitest over the pure logic (allocation invariants, weights, spam)
 
-```
-Document → /api/extract → /api/judge → /api/graph → /api/theory
-             (claims)     (filter)    (Neo4j+contradictions) (score)
-```
+## Auth modes
 
-## Agent contracts
+With Clerk keys set, Clerk runs (middleware + provider). Without them, dev-auth
+mode: a `dev_user` cookie picks a seeded user via the navbar dropdown;
+`/api/dev/login` is hard-disabled when Clerk is enabled.
 
-| Agent | Input | Output |
-|---|---|---|
-| Extractor | raw document text | `RawClaim[]` (text, confidence, timeRef, entities) |
-| Judge | `RawClaim[]` | status: ACCEPTED / WEAK / REJECTED |
-| GraphBuilder | judged claims | Neo4j nodes + edges |
-| ContradictionDetector | documentId | `Contradiction[]` + CONTRADICTS edges in Neo4j |
-| TheoryScorer | theoryId + `TheoryNode[]` | score 0–1, verdict, breakdown |
+## When touching money code
 
-## Demo flow (Kickstarter)
-
-1. `/vault` — documents are pre-loaded by `npm run seed:demo`
-2. Click **Extract** on any document → claims appear in `/claims`
-3. Click **Judge** → claims get ACCEPTED/WEAK/REJECTED status
-4. Click **Graph** → redirects to `/graph` with D3 force visualization
-5. Red dashed edges = contradictions detected automatically
-6. `/theory` → select claims, score your theory
-
-## Environment variables
-
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `OPENAI_API_KEY` | GPT-4o API key |
-| `OPENAI_MODEL` | Model override (default: gpt-4o) |
-| `NEO4J_URI` | bolt://... |
-| `NEO4J_USER` / `NEO4J_PASSWORD` | Neo4j credentials |
-| `REDIS_URL` | Redis connection string |
-| `AWS_*` / `S3_BUCKET` | S3 credentials (optional for text-only mode) |
-
-## Common commands
-
-```bash
-npm run dev           # dev server
-npx tsc --noEmit      # type check
-npm run seed:demo     # reset + load demo data
-npx prisma studio     # browse DB in browser
-npm run db:migrate    # run migrations
-```
+Run `npm test` (allocation invariants) and re-check idempotency: calculating a
+period twice must create zero new entries; running payouts twice must move $0.

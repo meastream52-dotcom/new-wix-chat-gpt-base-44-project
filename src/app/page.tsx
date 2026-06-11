@@ -1,75 +1,72 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { PostCard } from "@/components/PostCard";
 
-const PIPELINE = [
-  { step: "01", label: "Upload", desc: "Ingest historical or legal documents into the vault", href: "/vault" },
-  { step: "02", label: "Extract", desc: "AI breaks documents into atomic, verifiable claims", href: "/claims" },
-  { step: "03", label: "Judge", desc: "Claims are filtered and scored by confidence", href: "/claims" },
-  { step: "04", label: "Graph", desc: "Entities and claims form a knowledge graph", href: "/graph" },
-  { step: "05", label: "Contradict", desc: "Temporal and semantic inconsistencies surface as red edges", href: "/graph" },
-  { step: "06", label: "Theorize", desc: "Build a theory from claims and receive a scored verdict", href: "/theory" },
-];
+export const dynamic = "force-dynamic";
 
-const CASES = [
-  { tag: "marilyn-monroe", label: "Marilyn Monroe", status: "Active" },
-  { tag: "jfk", label: "JFK Assassination", status: "Active" },
-  { tag: "mlk", label: "MLK Archives", status: "Coming soon" },
-];
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tag?: string }>;
+}) {
+  const { tag } = await searchParams;
 
-export default function Home() {
+  const [posts, tags] = await Promise.all([
+    prisma.post.findMany({
+      where: {
+        status: "PUBLISHED",
+        visibility: "PUBLIC",
+        moderationStatus: { in: ["APPROVED", "PENDING"] },
+        ...(tag ? { tags: { some: { tag: { slug: tag } } } } : {}),
+      },
+      include: {
+        author: { select: { username: true, name: true, avatar: true } },
+        tags: { include: { tag: true } },
+        _count: { select: { comments: true, reactions: true } },
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 30,
+    }),
+    prisma.tag.findMany({ where: { status: "active" }, orderBy: { name: "asc" }, take: 20 }),
+  ]);
+
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="mb-10">
-        <h1 className="text-2xl font-mono font-bold text-[#e6edf3] mb-2">Evidence AI</h1>
-        <p className="text-[#8b949e]">
-          Structured reasoning infrastructure for contested historical information.
-        </p>
+    <div className="grid gap-8 md:grid-cols-[1fr_240px]">
+      <div className="space-y-4">
+        {tag && (
+          <p className="text-sm text-gray-600">
+            Stories tagged <span className="font-semibold">#{tag}</span> —{" "}
+            <Link href="/" className="underline">clear</Link>
+          </p>
+        )}
+        {posts.length === 0 && (
+          <div className="card text-center text-gray-500">
+            No stories yet. <Link href="/write" className="text-accent underline">Write the first one.</Link>
+          </div>
+        )}
+        {posts.map((post) => (
+          <PostCard key={post.id} post={post} />
+        ))}
       </div>
-
-      <section className="mb-10">
-        <h2 className="text-xs font-mono text-[#8b949e] uppercase mb-4">Pipeline</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {PIPELINE.map(({ step, label, desc, href }) => (
-            <Link
-              key={step}
-              href={href}
-              className="flex gap-4 p-4 rounded-lg border border-[#21262d] bg-[#161b22] hover:border-[#30363d] transition-colors"
-            >
-              <span className="font-mono text-xs text-[#58a6ff] shrink-0 mt-0.5">{step}</span>
-              <div>
-                <div className="text-sm font-medium text-gray-200 mb-0.5">{label}</div>
-                <div className="text-xs text-[#8b949e]">{desc}</div>
-              </div>
+      <aside className="hidden md:block">
+        <h3 className="text-sm font-semibold text-gray-700">Topics</h3>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {tags.map((t) => (
+            <Link key={t.id} href={`/?tag=${t.slug}`} className="badge bg-gray-100 hover:bg-gray-200">
+              {t.name}
             </Link>
           ))}
         </div>
-      </section>
-
-      <section>
-        <h2 className="text-xs font-mono text-[#8b949e] uppercase mb-4">Case Datasets</h2>
-        <div className="space-y-2">
-          {CASES.map(({ tag, label, status }) => (
-            <div
-              key={tag}
-              className="flex items-center justify-between p-4 rounded-lg border border-[#21262d] bg-[#161b22]"
-            >
-              <div className="flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-[#58a6ff]" />
-                <span className="text-sm text-gray-200">{label}</span>
-                <span className="text-xs font-mono text-[#8b949e]">{tag}</span>
-              </div>
-              <span
-                className={
-                  status === "Active"
-                    ? "text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded"
-                    : "text-xs text-[#8b949e] bg-[#21262d] px-2 py-0.5 rounded"
-                }
-              >
-                {status}
-              </span>
-            </div>
-          ))}
+        <div className="card mt-6 text-sm">
+          <p className="font-semibold">Earn by writing & reading</p>
+          <p className="mt-1 text-gray-600">
+            40% of subscription revenue goes to writers, 10% to active readers.
+          </p>
+          <Link href="/earnings-policy" className="mt-2 inline-block text-accent underline">
+            How it works
+          </Link>
         </div>
-      </section>
+      </aside>
     </div>
   );
 }

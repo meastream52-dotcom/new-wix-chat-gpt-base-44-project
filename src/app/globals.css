@@ -2,32 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
 body {
-  height: 100%;
-  background-color: #0f1117;
-  color: #e6edf3;
+  @apply bg-paper text-ink antialiased;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.prose-blog {
+  @apply max-w-none text-[17px] leading-7;
 }
-::-webkit-scrollbar-track {
-  background: #0f1117;
+.prose-blog h1 { @apply mt-8 mb-3 text-3xl font-bold; }
+.prose-blog h2 { @apply mt-8 mb-3 text-2xl font-bold; }
+.prose-blog h3 { @apply mt-6 mb-2 text-xl font-semibold; }
+.prose-blog p { @apply my-4; }
+.prose-blog a { @apply text-accent underline; }
+.prose-blog ul { @apply my-4 list-disc pl-6; }
+.prose-blog ol { @apply my-4 list-decimal pl-6; }
+.prose-blog blockquote { @apply my-4 border-l-4 border-gray-300 pl-4 italic text-gray-600; }
+.prose-blog pre { @apply my-4 overflow-x-auto rounded-lg bg-ink p-4 text-sm text-gray-100; }
+.prose-blog code { @apply rounded bg-gray-100 px-1 py-0.5 text-sm; }
+.prose-blog pre code { @apply bg-transparent p-0; }
+.prose-blog img { @apply my-6 rounded-lg; }
+.prose-blog table { @apply my-4 w-full border-collapse text-sm; }
+.prose-blog th, .prose-blog td { @apply border border-gray-200 px-3 py-2 text-left; }
+
+.btn {
+  @apply inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors;
 }
-::-webkit-scrollbar-thumb {
-  background: #21262d;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #30363d;
-}
+.btn-primary { @apply btn bg-accent text-white hover:bg-emerald-800; }
+.btn-ghost { @apply btn border border-gray-300 text-ink hover:bg-gray-100; }
+.btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700; }
+
+.card { @apply rounded-xl border border-gray-200 bg-white p-5; }
+.input { @apply w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none; }
+.badge { @apply inline-block rounded-full px-2 py-0.5 text-xs font-medium; }

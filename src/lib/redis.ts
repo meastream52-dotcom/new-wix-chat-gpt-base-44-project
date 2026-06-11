@@ -1,21 +1,13 @@
 import Redis from "ioredis";
 
-const globalForRedis = globalThis as unknown as { redis: Redis };
+const globalForRedis = globalThis as unknown as { redis?: Redis | null };
 
-export const redis =
-  globalForRedis.redis ??
-  new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", {
-    maxRetriesPerRequest: 3,
-    lazyConnect: true,
-  });
-
-if (process.env.NODE_ENV !== "production") globalForRedis.redis = redis;
-
-export async function enqueue(queue: string, payload: unknown): Promise<void> {
-  await redis.rpush(queue, JSON.stringify(payload));
-}
-
-export async function dequeue(queue: string): Promise<unknown | null> {
-  const raw = await redis.lpop(queue);
-  return raw ? JSON.parse(raw) : null;
+/** Lazy Redis client. Returns null when REDIS_URL is unset — callers must degrade gracefully. */
+export function getRedis(): Redis | null {
+  if (globalForRedis.redis !== undefined) return globalForRedis.redis;
+  const url = process.env.REDIS_URL;
+  globalForRedis.redis = url
+    ? new Redis(url, { maxRetriesPerRequest: 1, lazyConnect: true })
+    : null;
+  return globalForRedis.redis;
 }

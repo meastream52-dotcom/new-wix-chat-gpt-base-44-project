@@ -7,53 +7,366 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Document {
-  id        String   @id @default(uuid())
-  title     String
-  source    String
-  text      String
-  s3Key     String?
-  caseTag   String   @default("general")
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  username  String   @unique
+  name      String?
+  avatar    String?
+  bio       String?
+  role      Role     @default(USER)
+  isFlagged Boolean  @default(false)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  claims    Claim[]
+
+  // Convenience cache ONLY — Stripe webhook-driven subscription table is source of truth
+  isPremiumCached Boolean @default(false)
+
+  posts            Post[]
+  comments         Comment[]
+  reactions        Reaction[]
+  readingSessions  ReadingSession[]
+  subscription     Subscription?
+  payoutAccount    PayoutAccount?
+  ledgerEntries    LedgerEntry[]
+  engagementEvents EngagementEvent[]
+  notifications    Notification[]
+  reports          Report[]          @relation("Reporter")
+  fraudSignals     FraudSignal[]     @relation("FraudSubject")
+  reviewedSignals  FraudSignal[]     @relation("FraudReviewer")
+  auditLogs        AuditLog[]        @relation("AuditActor")
+  payoutBatches    PayoutBatch[]     @relation("BatchCreator")
+
+  @@map("users")
 }
 
-model Claim {
-  id         String   @id @default(uuid())
-  text       String
-  confidence Float
-  status     ClaimStatus @default(PENDING)
-  timeRef    String?
-  entities   String[]
-  documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
 }
 
-model Theory {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  claimIds    String[]
-  score       Float?
-  scoreBreakdown Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  stripeCustomerId     String
+  stripeSubscriptionId String?   @unique
+  status               String // active, trialing, past_due, canceled, etc. — mirrors Stripe
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("subscriptions")
 }
 
-model Contradiction {
-  id          String   @id @default(uuid())
-  claimAId    String
-  claimBId    String
-  reason      String
-  severity    Float
-  detectedAt  DateTime @default(now())
+model Post {
+  id               String           @id @default(cuid())
+  authorId         String
+  title            String
+  slug             String           @unique
+  contentMarkdown  String
+  excerpt          String?
+  coverImage       String?
+  status           PostStatus       @default(DRAFT)
+  visibility       Visibility       @default(PUBLIC)
+  moderationStatus ModerationStatus @default(PENDING)
+  publishedAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  author          User             @relation(fields: [authorId], references: [id])
+  tags            PostTag[]
+  comments        Comment[]
+  reactions       Reaction[]
+  readingSessions ReadingSession[]
+
+  @@index([authorId, createdAt])
+  @@index([status, publishedAt])
+  @@map("posts")
 }
 
-enum ClaimStatus {
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  DELETED
+}
+
+enum Visibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+
+enum ModerationStatus {
   PENDING
-  ACCEPTED
-  WEAK
+  APPROVED
   REJECTED
+  FLAGGED
+}
+
+// Many-to-many tags — NOT one category per post
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  creatorId String?
+  status    String   @default("active") // active, merged, banned
+  createdAt DateTime @default(now())
+
+  posts PostTag[]
+
+  @@map("tags")
+}
+
+model PostTag {
+  postId String
+  tagId  String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("post_tags")
+}
+
+model Comment {
+  id          String   @id @default(cuid())
+  postId      String
+  authorId    String
+  parentId    String? // threaded replies
+  content     String
+  contentHash String? // normalized-text hash for duplicate/spam detection
+  status      String   @default("visible") // visible, hidden, flagged, deleted
+  createdAt   DateTime @default(now())
+
+  post    Post      @relation(fields: [postId], references: [id])
+  author  User      @relation(fields: [authorId], references: [id])
+  parent  Comment?  @relation("Thread", fields: [parentId], references: [id])
+  replies Comment[] @relation("Thread")
+
+  @@index([postId, createdAt])
+  @@index([authorId, createdAt])
+  @@map("comments")
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("reactions")
+}
+
+// Sessions, not raw heartbeats — fixes the Math.floor(0.5) = 0 bug
+// and gives fraud detection something to work with
+model ReadingSession {
+  id               String    @id @default(cuid())
+  userId           String
+  postId           String
+  startedAt        DateTime  @default(now())
+  lastHeartbeatAt  DateTime  @default(now())
+  closedAt         DateTime?
+  totalSeconds     Int       @default(0)
+  qualifiedSeconds Int       @default(0)
+  maxScrollPct     Int       @default(0)
+  ipHash           String?
+  userAgentHash    String?
+  isSuspicious     Boolean   @default(false)
+
+  user User @relation(fields: [userId], references: [id])
+  post Post @relation(fields: [postId], references: [id])
+
+  @@index([userId, postId, startedAt])
+  @@index([closedAt, lastHeartbeatAt])
+  @@index([postId, startedAt])
+  @@map("reading_sessions")
+}
+
+model EngagementEvent {
+  id            BigInt   @id @default(autoincrement())
+  userId        String
+  postId        String?
+  eventType     String // post_published, comment_created, read_session_completed, reaction_created
+  points        Int      @default(0)
+  metadata      Json?
+  ipHash        String?
+  userAgentHash String?
+  isSuspicious  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([eventType, createdAt])
+  @@map("engagement_events")
+}
+
+model RevenuePeriod {
+  id                String    @id @default(cuid())
+  periodStart       DateTime  @db.Date
+  periodEnd         DateTime  @db.Date
+  totalRevenueCents BigInt
+  ownerPoolCents    BigInt
+  writerPoolCents   BigInt
+  userPoolCents     BigInt
+  status            String    @default("calculating") // calculating, pending_review, finalized, paid, failed
+  failureReason     String?
+  createdAt         DateTime  @default(now())
+  finalizedAt       DateTime?
+
+  ledgerEntries LedgerEntry[]
+  payoutBatches PayoutBatch[]
+
+  @@unique([periodStart, periodEnd])
+  @@map("revenue_periods")
+}
+
+model LedgerEntry {
+  id               String   @id @default(cuid())
+  userId           String
+  postId           String?
+  revenuePeriodId  String
+  sourceType       String // writer_pool, user_pool, bonus, adjustment, reversal
+  amountCents      BigInt
+  currency         String   @default("usd")
+  status           String   @default("pending") // pending, approved, paid, reversed, held_for_review
+  reviewNote       String?
+  payoutBatchId    String?
+  stripeTransferId String?
+  failureReason    String?
+  createdAt        DateTime @default(now())
+
+  user   User          @relation(fields: [userId], references: [id])
+  period RevenuePeriod @relation(fields: [revenuePeriodId], references: [id])
+  batch  PayoutBatch?  @relation(fields: [payoutBatchId], references: [id])
+
+  @@index([userId, status])
+  @@index([revenuePeriodId, status])
+  @@map("earnings_ledger")
+}
+
+model PayoutBatch {
+  id              String    @id @default(cuid())
+  revenuePeriodId String?
+  status          String    @default("created") // created, processing, completed, completed_with_failures
+  createdById     String
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  period    RevenuePeriod? @relation(fields: [revenuePeriodId], references: [id])
+  createdBy User           @relation("BatchCreator", fields: [createdById], references: [id])
+  entries   LedgerEntry[]
+
+  @@map("payout_batches")
+}
+
+model PayoutAccount {
+  id                       String   @id @default(cuid())
+  userId                   String   @unique
+  stripeConnectedAccountId String?  @unique
+  onboardingStatus         String   @default("not_started") // not_started, in_progress, complete
+  payoutsEnabled           Boolean  @default(false)
+  chargesEnabled           Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("payout_accounts")
+}
+
+// Webhook idempotency
+model StripeEvent {
+  id          String    @id // Stripe event ID
+  eventType   String
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("stripe_events")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  targetType String // post, comment
+  targetId   String
+  reason     String
+  status     String   @default("open") // open, upheld, dismissed
+  createdAt  DateTime @default(now())
+
+  reporter User @relation("Reporter", fields: [reporterId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@map("reports")
+}
+
+model FraudSignal {
+  id           String    @id @default(cuid())
+  userId       String
+  signalType   String
+  severity     String // low, medium, high
+  evidence     Json
+  status       String    @default("open") // open, reviewed_ok, confirmed
+  createdAt    DateTime  @default(now())
+  reviewedById String?
+  reviewedAt   DateTime?
+
+  user       User  @relation("FraudSubject", fields: [userId], references: [id])
+  reviewedBy User? @relation("FraudReviewer", fields: [reviewedById], references: [id])
+
+  @@index([status, severity, createdAt])
+  @@index([userId, signalType])
+  @@map("fraud_signals")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // entry_approved, payout_sent, payout_held, content_flagged, report_outcome
+  body      String
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+// Revenue split and other tunables live in the DB, not in code.
+// Values are JSON-encoded strings (e.g. revenue_split = {"ownerPct":50,...}).
+model PlatformConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_config")
 }
