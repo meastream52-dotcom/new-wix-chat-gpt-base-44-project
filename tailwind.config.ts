@@ -1,29 +1,29 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss'
 
 const config: Config = {
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       colors: {
-        surface: "#0f1117",
-        panel: "#161b22",
-        border: "#21262d",
-        accent: "#58a6ff",
-        danger: "#f85149",
-        success: "#3fb950",
-        warning: "#d29922",
-        muted: "#8b949e",
-      },
-      fontFamily: {
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        // Map CSS variables so you can use Tailwind utilities on theme colors
+        'bg-primary': 'var(--bg-primary)',
+        'bg-secondary': 'var(--bg-secondary)',
+        'bg-card': 'var(--bg-card)',
+        accent: 'var(--accent)',
+        'accent-glow': 'var(--accent-glow)',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        border: 'var(--border)',
+        win: 'var(--win)',
+        loss: 'var(--loss)',
       },
     },
   },
   plugins: [],
-};
+}
 
-export default config;
+export default config

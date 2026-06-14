@@ -2,32 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+/* ─── Theme: Neon (default) ─────────────────────────────────────────── */
+:root,
+[data-theme="neon"] {
+  --bg-primary: #0f0f13;
+  --bg-secondary: #1a1a24;
+  --bg-card: #1e1e2e;
+  --accent: #7c3aed;
+  --accent-glow: #a855f7;
+  --accent-secondary: #06b6d4;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border: #2d2d3d;
+  --win: #22c55e;
+  --loss: #ef4444;
 }
 
-* {
-  box-sizing: border-box;
+/* ─── Theme: Minimal ─────────────────────────────────────────────────── */
+[data-theme="minimal"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-card: #ffffff;
+  --accent: #6366f1;
+  --accent-glow: #818cf8;
+  --accent-secondary: #0ea5e9;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --border: #e2e8f0;
+  --win: #16a34a;
+  --loss: #dc2626;
 }
 
-html,
+/* ─── Theme: Vegas ───────────────────────────────────────────────────── */
+[data-theme="vegas"] {
+  --bg-primary: #1a0a00;
+  --bg-secondary: #2d1200;
+  --bg-card: #3d1a00;
+  --accent: #d97706;
+  --accent-glow: #f59e0b;
+  --accent-secondary: #dc2626;
+  --text-primary: #fef3c7;
+  --text-secondary: #d97706;
+  --border: #4a2800;
+  --win: #22c55e;
+  --loss: #ef4444;
+}
+
 body {
-  height: 100%;
-  background-color: #0f1117;
-  color: #e6edf3;
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0f1117;
-}
-::-webkit-scrollbar-thumb {
-  background: #21262d;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #30363d;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
