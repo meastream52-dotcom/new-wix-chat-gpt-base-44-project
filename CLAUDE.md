@@ -1,84 +1,127 @@
-# Evidence AI — Codebase Guide
+# Play-Money Casino Prototype — Project Rules
 
-## What this is
-Structured reasoning platform: ingest historical documents → extract atomic claims → validate → build knowledge graph → detect contradictions → score user-built theories.
+## Non-Negotiable Rules
 
-## Tech stack
-- **Framework**: Next.js 16 (App Router), TypeScript
-- **Database**: PostgreSQL via Prisma ORM
-- **Graph DB**: Neo4j (knowledge graph)
-- **Queue**: Redis (job queue)
-- **Storage**: AWS S3 (document files)
-- **LLM**: OpenAI GPT-4o (agents)
-- **Visualization**: D3.js force graph
+1. **PLAY-MONEY ONLY.** Coins have no real value and are never redeemable for anything. Never add deposit, withdrawal, purchase, or redemption features. This is legally a game, not gambling.
 
-## Local setup
+2. **Server is always authoritative.** Game outcomes and balance changes are computed server-side only (Next.js API routes). The client never calculates a win or a balance — it only animates results the server returns.
 
-```bash
-cp .env.example .env      # fill in your credentials
-npm install
-npx prisma db push        # create tables
-npm run seed:demo         # load demo data (no API keys needed)
-npm run dev               # http://localhost:3000
-```
+3. **Ledger is append-only.** Never UPDATE or DELETE a balance row. Every coin movement is a new immutable `ledger_entries` row. Balance is always derived by summing the ledger.
 
-## Key directories
+4. **All randomness uses the provably-fair engine.** HMAC-SHA256(serverSeed, `${clientSeed}:${nonce}`). Never use `Math.random()` for game outcomes.
+
+5. **Stack:** Next.js 16 (App Router) + Tailwind CSS + Supabase (Postgres + Auth). Deploy target is Vercel.
+
+## Stack
+
+- **Frontend:** Next.js 16 (App Router), TypeScript, Tailwind CSS
+- **Backend:** Next.js API routes (server-authoritative game logic)
+- **Database:** Supabase (PostgreSQL + Auth)
+- **Hosting:** Vercel (free tier)
+
+## Data Model
+
+| Table | Purpose |
+|---|---|
+| `profiles` | user_id, username, created_at |
+| `wallets` | user_id, cached_balance (updated atomically with ledger) |
+| `ledger_entries` | id, user_id, amount, type (`bonus`/`bet`/`payout`), game_round_id, balance_after, created_at |
+| `server_seeds` | id, user_id, hashed_seed (shown to player), seed (revealed on rotation), active, created_at |
+| `game_rounds` | id, user_id, game, bet_amount, client_seed, server_seed_id, nonce, outcome, payout, created_at |
+
+New accounts automatically receive a one-time 10,000 coin bonus.
+
+## Provably-Fair Engine
+
+1. Server generates secret **server seed** → shows player its **SHA-256 hash** (commitment)
+2. Player has editable **client seed**
+3. Every bet increments a **nonce** (0, 1, 2, …)
+4. Outcome = `HMAC-SHA256(serverSeed, "${clientSeed}:${nonce}")` → hex → number → game result
+5. On seed rotation, old server seed is **revealed** so players can verify all past results
+
+## Game Build Order
+
+1. **Dice** — roll 0–99, bet over/under a target ← start here
+2. **Limbo** — pick a target multiplier, win if random multiplier exceeds it
+3. **Plinko** — ball drops through pegs into multiplier buckets
+4. **Mines** — reveal tiles, multiplier grows, one mine ends it
+5. **Crash** — multiplier rises in real time, cash out before it crashes
+
+## Theme System
+
+Three presets via Tailwind CSS variables, switchable live:
+- **Neon** — dark background, neon accents (Stake/Roobet style)
+- **Minimal** — clean, light, fintech style
+- **Vegas** — warm gold-and-red classic casino
+
+## Directory Structure
 
 ```
 src/
-  agents/       # AI pipeline agents (extractor, judge, graphBuilder, contradictionDetector, theoryScorer)
-  app/api/      # API routes: /upload /extract /judge /graph /theory
-  app/          # Pages: / /vault /claims /graph /theory
-  components/   # UI: EvidenceRow, ClaimCard, ConfidenceBar, Sidebar, InspectorPanel, GraphCanvas
-  lib/          # Clients: db (Prisma), openai, neo4j, redis, s3, types
-scripts/
-  seed-demo.ts  # Populates DB with Marilyn Monroe + JFK demo data
+  app/
+    (auth)/
+      login/page.tsx
+      signup/page.tsx
+    (game)/
+      lobby/page.tsx
+      dice/page.tsx
+      limbo/page.tsx
+      plinko/page.tsx
+      mines/page.tsx
+      crash/page.tsx
+      history/page.tsx
+    api/
+      wallet/balance/route.ts
+      games/
+        dice/route.ts
+        limbo/route.ts
+        plinko/route.ts
+        mines/route.ts
+        crash/route.ts
+    layout.tsx
+    page.tsx
+    globals.css
+  components/
+    layout/
+      Header.tsx
+      Sidebar.tsx
+    ui/
+      Button.tsx
+      Input.tsx
+      Card.tsx
+      BalanceDisplay.tsx
+      ThemeProvider.tsx
+    game/
+      BetPanel.tsx
+      GameResult.tsx
+      RoundHistory.tsx
+  lib/
+    supabase/
+      client.ts      # browser client
+      server.ts      # server client (for API routes)
+    casino/
+      provably-fair.ts
+      games/
+        dice.ts
+        limbo.ts
+        plinko.ts
+        mines.ts
+        crash.ts
+    types.ts
 ```
 
-## Pipeline flow
-
-```
-Document → /api/extract → /api/judge → /api/graph → /api/theory
-             (claims)     (filter)    (Neo4j+contradictions) (score)
-```
-
-## Agent contracts
-
-| Agent | Input | Output |
-|---|---|---|
-| Extractor | raw document text | `RawClaim[]` (text, confidence, timeRef, entities) |
-| Judge | `RawClaim[]` | status: ACCEPTED / WEAK / REJECTED |
-| GraphBuilder | judged claims | Neo4j nodes + edges |
-| ContradictionDetector | documentId | `Contradiction[]` + CONTRADICTS edges in Neo4j |
-| TheoryScorer | theoryId + `TheoryNode[]` | score 0–1, verdict, breakdown |
-
-## Demo flow (Kickstarter)
-
-1. `/vault` — documents are pre-loaded by `npm run seed:demo`
-2. Click **Extract** on any document → claims appear in `/claims`
-3. Click **Judge** → claims get ACCEPTED/WEAK/REJECTED status
-4. Click **Graph** → redirects to `/graph` with D3 force visualization
-5. Red dashed edges = contradictions detected automatically
-6. `/theory` → select claims, score your theory
-
-## Environment variables
+## Environment Variables
 
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `OPENAI_API_KEY` | GPT-4o API key |
-| `OPENAI_MODEL` | Model override (default: gpt-4o) |
-| `NEO4J_URI` | bolt://... |
-| `NEO4J_USER` / `NEO4J_PASSWORD` | Neo4j credentials |
-| `REDIS_URL` | Redis connection string |
-| `AWS_*` / `S3_BUCKET` | S3 credentials (optional for text-only mode) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server only, never expose to client) |
 
-## Common commands
+## Common Commands
 
 ```bash
-npm run dev           # dev server
+npm run dev           # dev server at http://localhost:3000
 npx tsc --noEmit      # type check
-npm run seed:demo     # reset + load demo data
-npx prisma studio     # browse DB in browser
-npm run db:migrate    # run migrations
+npm run build         # production build
 ```
