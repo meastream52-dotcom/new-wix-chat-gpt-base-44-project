@@ -1,12 +1,13 @@
 import OpenAI from "openai";
 
-const globalForOpenAI = globalThis as unknown as { openai: OpenAI };
+let _client: OpenAI | null = null;
 
-export const openai =
-  globalForOpenAI.openai ??
-  new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-if (process.env.NODE_ENV !== "production") globalForOpenAI.openai = openai;
+function client(): OpenAI {
+  if (!_client) {
+    _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "missing" });
+  }
+  return _client;
+}
 
 export const MODEL = process.env.OPENAI_MODEL ?? "gpt-4o";
 
@@ -15,7 +16,7 @@ export async function chat(
   userContent: string,
   jsonMode = true
 ): Promise<string> {
-  const response = await openai.chat.completions.create({
+  const response = await client().chat.completions.create({
     model: MODEL,
     response_format: jsonMode ? { type: "json_object" } : undefined,
     messages: [
