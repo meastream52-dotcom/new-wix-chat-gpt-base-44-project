@@ -1,0 +1,66 @@
+# =====================================================================
+# Athlete Opportunity Engine — Supabase CLI configuration
+# Docs: https://supabase.com/docs/guides/cli/config
+# =====================================================================
+project_id = "athlete-opportunity-engine"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Match Supabase production major version.
+major_version = 15
+
+[db.pooler]
+enabled = true
+default_pool_size = 20
+max_client_conn = 200
+
+[db.seed]
+enabled = true
+# Reference data is loaded on `supabase db reset`. Auth-dependent
+# user/profile demo data is seeded separately (see seed/README.md).
+sql_paths = ["./seed.sql"]
+
+[storage]
+enabled = true
+file_size_limit = "5GiB"   # athlete game film can be large
+
+[storage.buckets.athlete-videos]
+public = false
+file_size_limit = "5GiB"
+allowed_mime_types = ["video/mp4", "video/quicktime", "video/webm"]
+
+[storage.buckets.avatars]
+public = true
+file_size_limit = "5MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/webp"]
+
+[storage.buckets.school-logos]
+public = true
+file_size_limit = "2MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"]
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+
+# Magic Link & OAuth are enabled per PRD §15; configure providers/secrets
+# via the Supabase dashboard or environment for hosted environments.
+[auth.external.google]
+enabled = false
