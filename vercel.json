@@ -16,6 +16,8 @@
     "src/app/api/extract/route.ts": { "maxDuration": 60 },
     "src/app/api/judge/route.ts":   { "maxDuration": 60 },
     "src/app/api/graph/route.ts":   { "maxDuration": 60 },
-    "src/app/api/theory/route.ts":  { "maxDuration": 60 }
+    "src/app/api/theory/route.ts":  { "maxDuration": 60 },
+    "src/app/api/matches/route.ts": { "maxDuration": 60 },
+    "src/app/api/admin/schools/import/route.ts": { "maxDuration": 60 }
   }
 }
