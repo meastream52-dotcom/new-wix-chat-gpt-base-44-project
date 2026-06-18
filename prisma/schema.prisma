@@ -57,3 +57,51 @@ enum ClaimStatus {
   WEAK
   REJECTED
 }
+
+model Podcast {
+  id           String        @id @default(uuid())
+  title        String
+  topic        String
+  tone         String        @default("conversational")
+  targetLength Int           @default(10)
+  hostName     String        @default("Alex")
+  voiceId      String        @default("21m00Tcm4TlvDq8ikWAM")
+  status       PodcastStatus @default(DRAFT)
+  script       Json?
+  audioUrl     String?
+  adsEnabled   Boolean       @default(true)
+  adIds        String[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model AdCampaign {
+  id        String      @id @default(uuid())
+  name      String
+  sponsor   String
+  adCopy    String
+  placement AdPlacement @default(MID_ROLL)
+  status    AdStatus    @default(ACTIVE)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+enum PodcastStatus {
+  DRAFT
+  SCRIPTED
+  GENERATING
+  READY
+  FAILED
+}
+
+enum AdPlacement {
+  PRE_ROLL
+  MID_ROLL
+  POST_ROLL
+}
+
+enum AdStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
